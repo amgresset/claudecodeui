@@ -197,9 +197,78 @@ async function detectTaskMasterFolder(projectPath) {
 // Cache for extracted project directories
 const projectDirectoryCache = new Map();
 
+// Cache for decoded project paths
+const decodedPathCache = new Map();
+
 // Clear cache when needed (called when project files change)
 function clearProjectDirectoryCache() {
   projectDirectoryCache.clear();
+  decodedPathCache.clear();
+}
+
+// Decode project path from encoded folder name
+// The encoding replaces / with - but original paths may contain hyphens
+// We try different interpretations and check which path actually exists
+async function decodeProjectPath(encodedName) {
+  // Check cache first
+  if (decodedPathCache.has(encodedName)) {
+    return decodedPathCache.get(encodedName);
+  }
+
+  // Remove leading dash and split by dashes
+  const withoutLeadingDash = encodedName.replace(/^-/, '');
+  const parts = withoutLeadingDash.split('-');
+
+  // Generate all possible path interpretations by trying different hyphen placements
+  // We use a recursive approach to try joining adjacent parts with hyphens vs slashes
+  async function findValidPath(parts, currentPath) {
+    if (parts.length === 0) {
+      // Check if this path exists
+      try {
+        await fs.access(currentPath);
+        return currentPath;
+      } catch {
+        return null;
+      }
+    }
+
+    const nextPart = parts[0];
+    const remaining = parts.slice(1);
+
+    // Try adding as new path segment (with /)
+    const withSlash = currentPath + '/' + nextPart;
+    const slashResult = await findValidPath(remaining, withSlash);
+    if (slashResult) return slashResult;
+
+    // Try joining with hyphen to current segment
+    if (currentPath !== '') {
+      const lastSlashIndex = currentPath.lastIndexOf('/');
+      if (lastSlashIndex !== -1) {
+        const prefix = currentPath.substring(0, lastSlashIndex + 1);
+        const lastSegment = currentPath.substring(lastSlashIndex + 1);
+        const withHyphen = prefix + lastSegment + '-' + nextPart;
+        const hyphenResult = await findValidPath(remaining, withHyphen);
+        if (hyphenResult) return hyphenResult;
+      }
+    }
+
+    return null;
+  }
+
+  // Start the search
+  let decodedPath = null;
+  if (parts.length > 0) {
+    decodedPath = await findValidPath(parts.slice(1), '/' + parts[0]);
+  }
+
+  // If no valid path found, try extracting from session data (handles deleted folders)
+  if (!decodedPath) {
+    decodedPath = await extractProjectDirectory(encodedName);
+  }
+
+  // Cache and return
+  decodedPathCache.set(encodedName, decodedPath);
+  return decodedPath;
 }
 
 // Load project configuration file
@@ -376,22 +445,28 @@ async function getProjects() {
   const config = await loadProjectConfig();
   const projects = [];
   const existingProjects = new Set();
-  
+
   try {
     // Check if the .claude/projects directory exists
     await fs.access(claudeDir);
-    
+
     // First, get existing Claude projects from the file system
     const entries = await fs.readdir(claudeDir, { withFileTypes: true });
-    
+
     for (const entry of entries) {
       if (entry.isDirectory()) {
         existingProjects.add(entry.name);
         const projectPath = path.join(claudeDir, entry.name);
-        
-        // Extract actual project directory from JSONL sessions
-        const actualProjectDir = await extractProjectDirectory(entry.name);
-        
+
+        // Decode the project path from the folder name (folder name is the encoded launch directory)
+        // The folder name format is: absolute path with / replaced by -
+        // e.g., "-opt-stacks-ai-assistant" -> "/opt/stacks/ai-assistant"
+        //
+        // Problem: Original paths may contain hyphens (e.g., "ai-assistant", "ai-stack")
+        // We can't distinguish between path separators and literal hyphens just from the encoded name.
+        // Solution: Try different decode interpretations and check which path actually exists.
+        const actualProjectDir = await decodeProjectPath(entry.name);
+
         // Get display name from config or generate one
         const customName = config[entry.name]?.displayName;
         const autoDisplayName = await generateDisplayName(entry.name, actualProjectDir);

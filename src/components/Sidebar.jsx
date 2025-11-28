@@ -5,7 +5,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Input } from './ui/input';
 
-import { FolderOpen, Folder, Plus, MessageSquare, Clock, ChevronDown, ChevronRight, Edit3, Check, X, Trash2, Settings, FolderPlus, RefreshCw, Sparkles, Edit2, Star, Search } from 'lucide-react';
+import { FolderOpen, Folder, Plus, MessageSquare, Clock, ChevronDown, ChevronRight, Edit3, Check, X, Trash2, Settings, FolderPlus, RefreshCw, Sparkles, Edit2, Star, Search, Server } from 'lucide-react';
 import { cn } from '../lib/utils';
 import ClaudeLogo from './ClaudeLogo';
 import CursorLogo from './CursorLogo.jsx';
@@ -14,6 +14,19 @@ import ProjectCreationWizard from './ProjectCreationWizard';
 import { api } from '../utils/api';
 import { useTaskMaster } from '../contexts/TaskMasterContext';
 import { useTasksSettings } from '../contexts/TasksSettingsContext';
+
+// VM instances for multi-VM support (simple link switcher)
+const VM_INSTANCES = [
+  { id: 'jarvis', name: 'Jarvis', url: 'http://jarvis:3010' },
+  { id: 'core', name: 'Core', url: 'http://core:3010' },
+];
+
+// Detect current VM based on hostname
+const getCurrentVmId = () => {
+  const hostname = window.location.hostname.toLowerCase();
+  const vm = VM_INSTANCES.find(v => v.url.includes(hostname));
+  return vm?.id || 'jarvis';
+};
 
 // Move formatTimeAgo outside component to avoid recreation on every render
 const formatTimeAgo = (dateString, currentTime) => {
@@ -580,6 +593,34 @@ function Sidebar({
           </div>
         </div>
       </div>
+
+      {/* VM Switcher */}
+      {VM_INSTANCES.length > 1 && (
+        <div className="px-3 md:px-4 py-2 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Server className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            <div className="flex gap-1 flex-1">
+              {VM_INSTANCES.map(vm => {
+                const isCurrent = vm.id === getCurrentVmId();
+                return (
+                  <a
+                    key={vm.id}
+                    href={vm.url}
+                    className={cn(
+                      "flex-1 px-3 py-1.5 text-xs font-medium rounded-md text-center transition-colors",
+                      isCurrent
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    {vm.name}
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Search Filter and Actions */}
       {projects.length > 0 && !isLoading && (

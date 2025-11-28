@@ -8,9 +8,11 @@ services:
       - /home/amg/.claude:/home/node/.claude            # Claude sessions/config (uses Max subscription)
       - /opt/stacks:/opt/stacks                          # Access to projects
       - claude_ui_data:/home/node/.local                 # UI state
+      - claude_ui_db:/app/server/database                # Auth database persistence
     ports:
       - "3010:3010"
     restart: unless-stopped
 
 volumes:
   claude_ui_data:
+  claude_ui_db:
