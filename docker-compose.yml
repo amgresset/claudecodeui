@@ -5,10 +5,10 @@ services:
     environment:
       - PORT=3010
     volumes:
-      - /home/amg/.claude:/home/node/.claude            # Claude sessions/config (uses Max subscription)
-      - /opt/stacks:/opt/stacks                          # Access to projects
-      - claude_ui_data:/home/node/.local                 # UI state
-      - claude_ui_db:/app/server/database                # Auth database persistence
+      - ${CLAUDE_CONFIG_PATH:-/home/amg/.claude}:/home/node/.claude    # Claude sessions/config
+      - ${PROJECTS_PATH:-/opt/stacks}:/opt/stacks                       # Access to projects
+      - claude_ui_data:/home/node/.local                                # UI state
+      - claude_ui_db:/app/server/database                               # Auth database persistence
     ports:
       - "3010:3010"
     restart: unless-stopped
