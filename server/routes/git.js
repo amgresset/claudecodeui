@@ -4,7 +4,7 @@ import { promisify } from 'util';
 import path from 'path';
 import { promises as fs } from 'fs';
 import { extractProjectDirectory } from '../projects.js';
-import { queryClaudeSDK } from '../claude-sdk.js';
+import { queryClaudeSDK } from '../claude-cli-wrapper.js';
 import { spawnCursor } from '../cursor-cli.js';
 
 const router = express.Router();

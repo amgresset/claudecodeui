@@ -1,0 +1,16 @@
+services:
+  claude-code-ui:
+    build: .
+    container_name: claude-code-ui
+    environment:
+      - PORT=3010
+    volumes:
+      - /home/amg/.claude:/home/node/.claude            # Claude sessions/config (uses Max subscription)
+      - /opt/stacks:/opt/stacks                          # Access to projects
+      - claude_ui_data:/home/node/.local                 # UI state
+    ports:
+      - "3010:3010"
+    restart: unless-stopped
+
+volumes:
+  claude_ui_data:

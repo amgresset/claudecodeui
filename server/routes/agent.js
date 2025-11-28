@@ -6,7 +6,7 @@ import { promises as fs } from 'fs';
 import crypto from 'crypto';
 import { apiKeysDb, githubTokensDb } from '../database/db.js';
 import { addProjectManually } from '../projects.js';
-import { queryClaudeSDK } from '../claude-sdk.js';
+import { queryClaudeSDK } from '../claude-cli-wrapper.js';
 import { spawnCursor } from '../cursor-cli.js';
 import { Octokit } from '@octokit/rest';
 
